@@ -47,7 +47,9 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(state.clone())
             .service(
-                web::scope("/auth").configure(routes::auth::login)
+                web::scope("/auth")
+                    .configure(routes::auth::login)
+                    .configure(routes::auth::register)
             )
     })
         .bind(server_domain)?
