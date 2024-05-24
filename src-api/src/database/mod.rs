@@ -48,7 +48,7 @@ pub async fn init() -> Result<DatabaseInstance, sqlx::Error> {
         .max_connections(5)
         .connect(connection.as_str())
         .await?;
-    dbg!(&pool);
+    // dbg!(&pool);
     Ok(DatabaseInstance {
         pool
     })
