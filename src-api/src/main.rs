@@ -1,25 +1,49 @@
 use std::fs::File;
 use std::io::Read;
-use std::{env, process::exit};
+use std::{env, process::exit}; use actix_session::config::{BrowserSession, CookieContentSecurity, PersistentSession};
+use actix_web::cookie::time::Duration;
+use actix_web::cookie::{Key, SameSite};
+use actix_web::middleware::Logger;
 use actix_web::{HttpServer, App, web};
 use database::{ DatabaseInstance, init };
+use utils::get_session_expire;
 use std::sync::Mutex;
 use std::path::PathBuf;
+use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 
 mod routes;
 mod database;
 mod utils;
+mod error;
 
 #[derive(Debug)]
 struct AppState {
     database_instance: Mutex<DatabaseInstance>
 }
 
+fn middleware_session() -> SessionMiddleware<CookieSessionStore> {
+    let debug = env::var("CHA_DEBUG").unwrap_or("false".into());
+    let key = env::var("CHA_COOKIE_SESSION_KEY").expect("COOKIE_SESSION_KEY env is not set");
+    let key = Key::from(key.as_bytes());
+    let session_lifecycle = PersistentSession::default().session_ttl(get_session_expire());
+
+    SessionMiddleware::builder(
+        CookieSessionStore::default(), key
+    )
+    .cookie_name(String::from(utils::SESSION_NAME))
+    .cookie_secure(debug == "true")
+    .session_lifecycle(session_lifecycle)
+    .cookie_same_site(SameSite::Lax)
+    .cookie_content_security(CookieContentSecurity::Private)
+    .cookie_http_only(true)
+    .build()
+}
+
 fn load_env(path: String) {
     let mut f = File::options()
-            .read(true)
-            .open(PathBuf::from(&path))
-            .expect(&format!("Error Opening {}", &path));
+        .read(true)
+        .open(PathBuf::from(&path))
+        .expect(&format!("Error Opening {}", &path));
     let mut buf = String::new();
     let res = f.read_to_string(&mut buf);
     if let Err(e) = res {
@@ -82,6 +106,8 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
+            .wrap(middleware_session())
+            .wrap(Logger::default())
             .service(
                 web::scope("/auth")
                     .configure(routes::auth::login)

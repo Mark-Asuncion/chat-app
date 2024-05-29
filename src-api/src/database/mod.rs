@@ -1,6 +1,5 @@
 pub mod schema;
 pub mod query;
-pub mod error;
 
 use sqlx::postgres::{Postgres, PgPoolOptions, PgQueryResult, PgRow};
 use sqlx::Pool;
@@ -41,8 +40,8 @@ impl DatabaseInstance {
 }
 
 pub async fn init() -> Result<DatabaseInstance, sqlx::Error> {
-    let username = var("POSTGRES_USER").expect("POSTGRES_USER env not set");
-    let password = var("POSTGRES_PASS").expect("POSTGRES_PASS env not set");
+    let username = var("CHA_POSTGRES_USER").expect("CHA_POSTGRES_USER env not set");
+    let password = var("CHA_POSTGRES_PASS").expect("CHA_POSTGRES_PASS env not set");
     let connection = format!("postgres://{}:{}@localhost:5432/ChatApp", username, password);
     let pool = PgPoolOptions::new()
         .max_connections(5)

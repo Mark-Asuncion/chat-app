@@ -1,43 +1,41 @@
-use std::str::from_utf8;
+use actix_session::Session;
+use actix_web::{HttpResponse, Responder, guard, http::StatusCode};
+use actix_web::web;
+use sqlx::Row;
+use crate::{AppState, database::{query, DatabaseUtils}, error};
+use crate::database::schema::account::{Account, LoginRegisterInfo};
 
-use actix_web::{web::{self, Bytes}, HttpResponse, Responder, guard, http::StatusCode};
-use sqlx::{Row, QueryBuilder};
-use crate::{AppState, database::{query, DatabaseUtils, error}};
-use crate::database::schema::account::Account;
-
-async fn _login_handler(bytes: Bytes, state: web::Data<AppState>) -> impl Responder {
-    let body = from_utf8(&bytes.to_vec())
-        .unwrap_or_default()
-        .to_string();
-
-    let acc: serde_json::Value;
-    match serde_json::from_str(body.as_str()) {
-        Ok(v) => acc = v,
-        Err(e) => {
-            dbg!(e);
-            return HttpResponse::BadRequest()
-                .body("");
-        }
+async fn _login_handler(user: web::Json<LoginRegisterInfo>, state: web::Data<AppState>, session: Session) -> impl Responder {
+    let is_authorized = session.get::<bool>("authorized").unwrap_or_default().unwrap_or_default();
+    if is_authorized {
+        session.renew();
+        return HttpResponse::Ok()
+            .body("")
     }
-    let acc = Account::from(acc);
-    if let Err(e) = &acc {
-            return HttpResponse::BadRequest()
-                .body(e.to_string());
+
+    let acc = user.to_account();
+
+    if (acc.email.is_empty() || acc.username.is_empty()) && acc.password.is_empty() {
+        return HttpResponse::build(StatusCode::from_u16(401).unwrap())
+            .body(error::Error::missing_credentials().to_string());
     }
-    let acc = acc.unwrap();
 
     let db = &mut (*state.database_instance.lock().expect(&error::Error::acquire_instance().to_string()));
 
     let mut query = query::QueryBuilder::new();
-    let filter1 = query::Filter::If("email".into(), "=".into(), query::QueryValue::Varchar(acc.email.clone()));
-    let filter2 = query::Filter::If("username".into(), "=".into(), query::QueryValue::Varchar(acc.username.clone()));
-    let filter3 = query::Filter::If("password".into(), "=".into(), query::QueryValue::Varchar(acc.password.clone()));
+    let filter1: query::Filter;
+
+    if !acc.email.is_empty() {
+        filter1 = query::Filter::If("email".into(), "=".into(), query::QueryValue::Varchar(acc.email.clone()));
+    }
+    else {
+        filter1 = query::Filter::If("username".into(), "=".into(), query::QueryValue::Varchar(acc.username.clone()));
+    }
+    let filter2 = query::Filter::If("password".into(), "=".into(), query::QueryValue::Varchar(acc.password.clone()));
     query.select(Account::table(), Some(Account::as_columns()))
             .filter(filter1)
-            .or()
-            .filter(filter2)
             .and()
-            .filter(filter3);
+            .filter(filter2);
 
     let res = db.fetch_one(query).await;
     if let Err(e) = res {
@@ -45,15 +43,26 @@ async fn _login_handler(bytes: Bytes, state: web::Data<AppState>) -> impl Respon
         return HttpResponse::build(StatusCode::from_u16(400).unwrap())
             .body(error::Error::not_found().to_string());
     }
-
     let res = res.unwrap();
-    if !res.is_empty() {
-        let id: String = res.get_unchecked(0);
-        let email: String = res.get_unchecked(1);
-        let username: String = res.get_unchecked(2);
-        let password: String = res.get_unchecked(3);
-        println!("len({})::{}, {}, {}, {}", res.len(), id, email, username, password);
+    if res.is_empty() {
+        return HttpResponse::build(StatusCode::from_u16(401).unwrap())
+            .body(error::Error::bad_credentials().to_string());
     }
+
+    let id: String =        res.get_unchecked(0);
+    let email: String =     res.get_unchecked(1);
+    let username: String =  res.get_unchecked(2);
+    let password: String =  res.get_unchecked(3);
+    println!("len({})::{}, {}, {}, {}", res.len(), id, email, username, password);
+
+    if let Err(e) = session.insert("user_id", id) {
+        dbg!(e);
+    }
+    if let Err(e) = session.insert("authorized", true) {
+        dbg!(e);
+    }
+
+    dbg!(&session.entries());
 
     HttpResponse::Ok()
         .body("")
@@ -68,27 +77,14 @@ pub fn login(cfg: &mut web::ServiceConfig) {
     );
 }
 
-async fn _register_handler(bytes: Bytes, state: web::Data<AppState>) -> impl Responder {
-    let body = from_utf8(&bytes.to_vec())
-        .unwrap_or_default()
-        .to_string();
+async fn _register_handler(user: web::Json<LoginRegisterInfo>, state: web::Data<AppState>) -> impl Responder {
+    let mut acc = user.to_account();
 
-    let acc: serde_json::Value;
-    match serde_json::from_str(body.as_str()) {
-        Ok(v) => acc = v,
-        Err(e) => {
-            dbg!(e);
-            return HttpResponse::BadRequest()
-                .body("");
-        }
+    if (acc.email.is_empty() || acc.username.is_empty()) && acc.password.is_empty() {
+        return HttpResponse::build(StatusCode::from_u16(401).unwrap())
+            .body(error::Error::missing_credentials().to_string());
     }
-    let acc = Account::from(acc);
-    if let Err(e) = &acc {
-        return HttpResponse::BadRequest()
-            .body(e.to_string());
-    }
-    let mut acc = acc.unwrap();
-    acc.get_uuid();
+    acc.gen_uuid();
 
     let mut qb = query::QueryBuilder::new();
     qb.insert(Account::table(), Account::as_columns())

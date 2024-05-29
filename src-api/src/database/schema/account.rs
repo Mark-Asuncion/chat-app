@@ -1,11 +1,9 @@
-use crate::database::error::ErrTypes;
+use crate::error;
+use crate::error::ErrTypes;
 use crate::utils::gen_uuid;
 
 use super::super::DatabaseUtils;
-use super::super::DatabaseInstance;
 use super::super::query;
-use super::super::error;
-use std::io;
 use serde_json::Value;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -55,17 +53,32 @@ impl Account {
         })
     }
 
-    pub fn get_uuid(&mut self) {
-        self.id = gen_uuid(29);
+    pub fn gen_uuid(&mut self) {
+        self.id = gen_uuid();
     }
 
     pub fn new(email: &str, username: &str, password: &str) -> Self {
-        let id = gen_uuid(29);
+        let id = gen_uuid();
         Self {
             id,
             email: email.into(),
             username: username.into(),
             password: password.into()
         }
+    }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct LoginRegisterInfo {
+    email:    Option<String>,
+    username: Option<String>,
+    password: String
+}
+
+impl LoginRegisterInfo {
+    pub fn to_account(&self) -> Account {
+        Account::new(&self.email.as_ref().unwrap_or(&"".to_string()),
+            &self.username.as_ref().unwrap_or(&"".to_string()),
+            &self.password)
     }
 }

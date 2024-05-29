@@ -5,8 +5,11 @@ pub enum ErrTypes {
     MissingFields,
     InvalidValue,
     NotFound,
-    DatabaseInstance
+    DatabaseInstance,
+    MissingCredentials,
+    BadCredentials
 }
+
 impl fmt::Display for ErrTypes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -14,6 +17,8 @@ impl fmt::Display for ErrTypes {
             Self::InvalidValue => f.write_fmt(format_args!("Invalid Value")),
             Self::NotFound => f.write_fmt(format_args!("Not Found")),
             Self::DatabaseInstance => f.write_fmt(format_args!("Database Instance")),
+            Self::MissingCredentials => f.write_fmt(format_args!("Missing Credentials")),
+            Self::BadCredentials => f.write_fmt(format_args!("Bad Credentials")),
 
         }
     }
@@ -33,6 +38,13 @@ impl Error {
         }
     }
 
+    pub fn invalid_value() -> Self {
+        Self {
+            err_type: ErrTypes::InvalidValue,
+            what: "Error parsing data".into()
+        }
+    }
+
     pub fn not_found() -> Self {
         Self {
             err_type: ErrTypes::NotFound,
@@ -46,10 +58,28 @@ impl Error {
             what: "Error occured acquiring instance".into()
         }
     }
+
+    pub fn missing_credentials() -> Self {
+        Self {
+            err_type: ErrTypes::MissingCredentials,
+            what: String::new()
+        }
+    }
+
+    pub fn bad_credentials() -> Self {
+        Self {
+            err_type: ErrTypes::MissingCredentials,
+            what: String::new()
+        }
+    }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.what.is_empty() {
+            return f.write_fmt(format_args!("{}",
+                self.err_type));
+        }
         f.write_fmt(format_args!("[{}]::{}",
             self.err_type, self.what))
     }

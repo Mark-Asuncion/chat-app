@@ -40,7 +40,7 @@ export function Init() {
     const [isShowPass, setIsShowPass] = React.useState(false);
     const [isErr, setIsErr] = React.useState(false);
     const [isLogin, setIsLogin] = React.useState(true);
-    const apiAuth = `http://127.0.0.1:${env.API_PORT}/auth/login`;
+    const apiAuth = `${env.API_DOMAIN}/auth/login`;
     const tabEntries = [
         { active: true, text: "Login", cb: () => setIsLogin(true) },
         { text: "Register", cb: () => setIsLogin(false) },
