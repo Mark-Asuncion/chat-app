@@ -2,12 +2,16 @@ use core::fmt;
 
 #[derive(Debug)]
 pub enum ErrTypes {
+    // 400
     MissingFields,
     InvalidValue,
+    // 404
     NotFound,
-    DatabaseInstance,
+    // 401
     MissingCredentials,
-    BadCredentials
+    BadCredentials,
+    // 500
+    DatabaseInstance,
 }
 
 impl fmt::Display for ErrTypes {
@@ -68,7 +72,7 @@ impl Error {
 
     pub fn bad_credentials() -> Self {
         Self {
-            err_type: ErrTypes::MissingCredentials,
+            err_type: ErrTypes::BadCredentials,
             what: String::new()
         }
     }

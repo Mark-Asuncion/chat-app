@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { TabEntry, Tabs } from './Utils';
 import env from "react-dotenv";
+import { useNavigate } from 'react-router-dom';
 
 interface LoginData {
     email: string,
@@ -28,75 +29,372 @@ function EyeOpen() {
 
 function ErrText({ value }:{ value: string }) {
     return (
-        <p className='text-red-500 text-sm'>{ value }</p>
+        <p className='text-red-500 text-sm my-1'>{ value }</p>
     )
 }
 
-function login() {};
+interface InputProps {
+    value:                string,
+    type:                 string,
+    placeholder:          string,
+    label:                string,
+    isErr:                boolean,
+    isErrText:            string,
+    nameId:               string,
+    containerclass?:      string,
+    onChange:             (v: string) => void
+}
+
+interface InputPasswordProps {
+    value:                string,
+    placeholder:          string,
+    label:                string,
+    isErr:                boolean,
+    isErrText:            string,
+    nameId:               string,
+    containerclass?:      string,
+    onChange:             (v: string) => void
+}
+
+function Input(prop: InputProps) {
+    return (
+        <div className={( prop.containerclass )? prop.containerclass:""}>
+            <label htmlFor={prop.nameId}
+                className="block text-sm font-medium leading-6">
+                {prop.label}
+            </label>
+            <div className="relative mt-2 rounded-md shadow-sm">
+                <input
+                    type={prop.type}
+                    name={prop.nameId}
+                    id={prop.nameId}
+                    className="block bg-neutral-700 w-full rounded-md border-0 py-2 pl-3
+                    ring-1 ring-inset ring-gray-300 placeholder:text-gray-400
+                    focus:ring-2 focus:ring-inset focus:ring-accent focus:outline-none sm:text-sm sm:leading-6"
+                    placeholder={prop.placeholder}
+                    onChange={ (e) => {
+                        prop.onChange(e.target.value);
+                    }}
+                    value={prop.value}
+                />
+            </div>
+        { (prop.isErr)? <ErrText value={prop.isErrText}/>:<></> }
+        </div>
+    )
+}
+
+function InputPassword(prop: InputPasswordProps) {
+    const [isShowPass, setIsShowPass] = React.useState(false);
+    return (
+        <div className={( prop.containerclass )? prop.containerclass:""}>
+            <label htmlFor={prop.nameId}
+                className="block text-sm font-medium leading-6">
+                {prop.label}
+            </label>
+            <div className="relative mt-2 rounded-md shadow-sm">
+                <input
+                    type={ (isShowPass)? "text":"password" }
+                    name={prop.nameId}
+                    id={prop.nameId}
+                    className="block bg-neutral-700 w-full rounded-md border-0 py-2 pl-3
+                    ring-1 ring-inset ring-gray-300 placeholder:text-gray-400
+                    focus:ring-2 focus:ring-inset focus:ring-accent focus:outline-none sm:text-sm sm:leading-6"
+                    placeholder={prop.placeholder}
+                    onChange={ (e) => {
+                        prop.onChange(e.target.value);
+                    }}
+                    value={prop.value}
+                />
+                <button
+                    type='button'
+                    onClick={() => setIsShowPass(!isShowPass)}
+                    className='absolute inset-y-0 right-0 flex items-center pr-3 button'>
+                    { (isShowPass)? <EyeOpen />:<EyeClose /> }
+                </button>
+            </div>
+        { (prop.isErr)? <ErrText value={prop.isErrText}/>:<></> }
+        </div>
+    )
+}
+
+async function login_session(cbOk: () => void) {
+    const apiAuth = `${env.API_DOMAIN}/auth/login`;
+    const res = await fetch(apiAuth, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+    if (res.ok) {
+        cbOk();
+    }
+}
+
+interface LoginRegisterInfo {
+    email: string | null,
+    username: string | null,
+    password: string
+}
+
+async function login(input: LoginRegisterInfo, cbOk: () => void, cbFail: (err: string) => void) {
+    const apiAuth = `${env.API_DOMAIN}/auth/login`;
+    let isEmail = false;
+    if (input.email!.match(/@/) != null) {
+        isEmail = true;
+    }
+    console.log(input, isEmail);
+
+    const res = await fetch(apiAuth, {
+        method: "POST",
+        credentials: 'include',
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            email: (isEmail)? input.email:null,
+            username: (!isEmail)? input.email:null,
+            password: input.password
+        })
+    });
+    if (res.ok) {
+        return cbOk();
+    }
+    return cbFail(await res.text());
+};
 
 function register() {};
 
+interface ErrState {
+    email: [ boolean, string ],
+    username: [ boolean, string ],
+    password: [ boolean, string ]
+}
+
 export function Init() {
-    const [isShowPass, setIsShowPass] = React.useState(false);
-    const [isErr, setIsErr] = React.useState(false);
-    const [isLogin, setIsLogin] = React.useState(true);
-    const apiAuth = `${env.API_DOMAIN}/auth/login`;
-    const tabEntries = [
-        { active: true, text: "Login", cb: () => setIsLogin(true) },
-        { text: "Register", cb: () => setIsLogin(false) },
-    ];
+    const navigate = useNavigate();
+    const [sessionLogin, setSessionLoginStatus] = React.useState(true);
+    const [isErr, setIsErr] = React.useState<ErrState>({
+        email:    [ false, "" ],
+        username: [ false, "" ],
+        password: [ false, "" ]
+    });
+    const [formsValue, setFormsValue] = React.useState({
+        email: "",
+        username: "",
+        password: ""
+    });
+
+    async function validateEmailUsername() {
+        const apiAuth = `${env.API_DOMAIN}/auth/validate`;
+        // console.log(formsValue);
+        const res = await fetch(apiAuth, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                email: ( formsValue.email.length == 0 )? null:formsValue.email,
+                username: ( formsValue.username.length == 0 )? null:formsValue.username
+            })
+        });
+        if (!res.ok) {
+            return;
+        }
+        const body = await res.json();
+        if (body.email && body.email.length != 0) {
+            setIsErr(prev => {
+                return {
+                    ...prev,
+                    email: [ true, (tabEntries[1].active)? "Email already exists":"" ]
+                }
+            });
+        }
+        else {
+            setIsErr(prev => {
+                return {
+                    ...prev,
+                    email: [ false, "" ]
+                }
+            });
+        }
+        if (body.username && body.username.length != 0) {
+            setIsErr(prev => {
+                return {
+                    ...prev,
+                    username: [ true, "Username already exists" ]
+                }
+            });
+        }
+        else {
+            setIsErr(prev => {
+                return {
+                    ...prev,
+                    username: [ false, "" ]
+                }
+            });
+        }
+    }
+
+    async function validatePass() {
+        const pass = formsValue.password;
+        if (pass.length != 0 && pass.length < 8) {
+            setIsErr(prev => {
+                return {
+                    ...prev,
+                    password: [ true, "Password must be at least 8 characters long" ],
+                }
+            });
+        }
+        else {
+            setIsErr(prev => {
+                return {
+                    ...prev,
+                    password: [ false, "" ],
+                }
+            });
+        }
+    }
+
+    function setTab(index: number, setTabEntries: React.Dispatch<React.SetStateAction<TabEntry[]>>) {
+        setTabEntries(prev => {
+            return prev.map((v, i) => {
+                const active = i == index;
+                return {
+                    ...v,
+                    active,
+                };
+            });
+        });
+        setFormsValue({
+            email: "",
+            username: "",
+            password: ""
+        });
+    }
+
+    const [ tabEntries, setTabEntries ] = React.useState<TabEntry[]>([
+        { active: true, text: "Login", cb: function() {
+            setTab(0, setTabEntries);
+        }
+        },
+        { text: "Register", cb: function() {
+            setTab(1, setTabEntries);
+        }
+        },
+    ]);
+
+    useEffect(() => {
+        if (sessionLogin) {
+            login_session(() => {
+                navigate("/");
+            });
+            setSessionLoginStatus(false);
+        }
+        validateEmailUsername();
+        validatePass();
+    },[formsValue]);
 
     return (
-        <div className='p-10 flex flex-col text-white w-1/2 mx-auto mt-20 bg-neutral-900
+        <div className='p-10 flex flex-col text-white w-1/2 mx-auto mt-10 bg-neutral-900
             rounded-md max-w-[475px] shadow-lg shadow-black'>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" 
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"
                 className="mx-auto my-4 w-1/4 h-auto">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
             </svg>
             <Tabs entries={tabEntries}/>
             <div>
-                <label htmlFor="price" className="block text-sm font-medium leading-6">
-                    Email
-                </label>
-                <div className="relative mt-2 rounded-md shadow-sm">
-                    <input
-                        type="email"
-                        name="email"
-                        id="email"
-                        className="block bg-neutral-700 w-full rounded-md border-0 py-2 pl-3
-                        ring-1 ring-inset ring-gray-300 placeholder:text-gray-400
-                        focus:ring-2 focus:ring-inset focus:ring-accent focus:outline-none sm:text-sm sm:leading-6"
-                        placeholder="email@domain.com"
-                    />
-                </div>
-                { (isErr)? <ErrText value="Invalid email format"/>:null }
-                <label htmlFor="price" className="block text-sm font-medium leading-6 mt-5">
-                    Password
-                </label>
-                <div className="relative mt-2 rounded-md shadow-sm">
-                    <input
-                        type={(isShowPass)? "text":"password"}
-                        name="password"
-                        id="password"
-                        className="block bg-neutral-700 w-full rounded-md border-0 py-2 pl-3
-                        ring-1 ring-inset ring-gray-300 placeholder:text-gray-400
-                        focus:ring-2 focus:ring-inset focus:ring-accent focus:outline-none sm:text-sm sm:leading-6"
-                        placeholder="password"
-                    />
-                    <button
-                        type='button'
-                        onClick={() => setIsShowPass(!isShowPass)}
-                        className='absolute inset-y-0 right-0 flex items-center pr-3 button'>
-                        { (isShowPass)? <EyeOpen />:<EyeClose /> }
-                    </button>
-                </div>
-                { (isErr)? <ErrText value="Password must be at least 8 characters"/>:null }
-                <div className='border-b border-neutral-600 mt-14'></div>
+                {/* extract to component */}
+                <Input
+                    value={formsValue.email}
+                    type={(tabEntries[1].active)? "email":"text"}
+                    placeholder={(tabEntries[1].active)? "Enter Email":"Enter Email or Username"}
+                    label={ (tabEntries[1].active)? "Email":"Email or Username" }
+                    isErr={isErr.email[0]}
+                    isErrText={isErr.email[1]}
+                    nameId="emailorusername"
+                    onChange={(v) => {
+                        setFormsValue(prev =>{
+                            return {
+                                ...prev,
+                                email: v
+                            }
+                        });
+                        // if (tabEntries[1].active) {
+                        //     if (tabEntries[1].active)
+                        //         validateEmailUsername();
+                        // }
+                    }}
+                />
+                {
+                    ( tabEntries[1].active )?
+                        <Input
+                            value={formsValue.username}
+                            type="text"
+                            placeholder="Enter Username"
+                            label="username"
+                            isErr={isErr.username[0]}
+                            isErrText={isErr.username[1]}
+                            nameId="username"
+                            containerclass="mt-2"
+                            onChange={(v) => {
+                                setFormsValue(prev =>{
+                                    return {
+                                        ...prev,
+                                        username: v
+                                    }
+                                });
+                                // validateEmailUsername();
+                            }}
+                        />:<></>
+                }
+                <InputPassword
+                    value={formsValue.password}
+                    placeholder="Enter Password"
+                    label="password"
+                    isErr={isErr.password[0]}
+                    isErrText={isErr.password[1]}
+                    nameId="password"
+                    containerclass="mt-2"
+                    onChange={(v) => {
+                        setFormsValue(prev =>{
+                            return {
+                                ...prev,
+                                password: v
+                            }
+                        });
+                        // validatePass();
+                    }}
+                />
+                <div className='border-b border-neutral-600 mt-10'></div>
                 <button type='button'
-                    onClick={() => {}}
+                    onClick={() => {
+                        if (tabEntries[1].active) {
+                            register();
+                        }
+                        login({
+                            ...formsValue,
+                            username: null
+                        },
+                            () => {
+                                navigate("/");
+                            },
+                            (e) => {
+                                console.log("login_handler::", e);
+                                setIsErr(prev => {
+                                    return {
+                                        ...prev,
+                                        email: [true, "The email you entered does not match any account."],
+                                        password: [true, "The password you entered is incorrect."]
+                                    };
+                                });
+                            }
+                        );
+                    }}
                     className='text-center mx-auto p-3 bg-accent
                     w-full rounded-md font-bold my-4
-                    hover:brightness-125'>Login</button>
+                    hover:brightness-125'>
+                    { (tabEntries[1].active)? "Register":"Login" }
+                </button>
             </div>
         </div>
     )

@@ -7,10 +7,6 @@ use std::env::var;
 
 use self::query::{QueryBuilder, QueryValue};
 
-pub trait AsInsertQuery {
-    fn as_insert() -> String;
-}
-
 pub trait DatabaseUtils<'a>  {
     fn as_columns() -> Vec<&'a str>;
     fn as_insert_value(&self) -> Vec<QueryValue>;

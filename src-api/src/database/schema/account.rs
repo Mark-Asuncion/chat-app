@@ -1,10 +1,10 @@
-use crate::error;
-use crate::error::ErrTypes;
+// use crate::error;
+// use crate::error::ErrTypes;
 use crate::utils::gen_uuid;
 
 use super::super::DatabaseUtils;
 use super::super::query;
-use serde_json::Value;
+// use serde_json::Value;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct Account {
@@ -34,24 +34,24 @@ impl DatabaseUtils<'_> for Account {
 }
 
 impl Account {
-    pub fn from(json: Value) -> Result<Self, error::Error> {
-        let email    =  &json["email"];
-        let username =  &json["username"];
-        let password =  &json["password"];
-        if email == &Value::Null && username == &Value::Null
-            || password == &Value::Null {
-            return Err(error::Error::new(ErrTypes::MissingFields, "Email or Username"));
-        }
-        let email = email.as_str().unwrap_or_default().to_string();
-        let username = username.as_str().unwrap_or_default().to_string();
-        let password = password.as_str().unwrap_or_default().to_string();
-        Ok(Self {
-            id: "".into(),
-            email,
-            username,
-            password
-        })
-    }
+    // pub fn from(json: Value) -> Result<Self, error::Error> {
+    //     let email    =  &json["email"];
+    //     let username =  &json["username"];
+    //     let password =  &json["password"];
+    //     if email == &Value::Null && username == &Value::Null
+    //         || password == &Value::Null {
+    //         return Err(error::Error::new(ErrTypes::MissingFields, "Email or Username"));
+    //     }
+    //     let email = email.as_str().unwrap_or_default().to_string();
+    //     let username = username.as_str().unwrap_or_default().to_string();
+    //     let password = password.as_str().unwrap_or_default().to_string();
+    //     Ok(Self {
+    //         id: "".into(),
+    //         email,
+    //         username,
+    //         password
+    //     })
+    // }
 
     pub fn gen_uuid(&mut self) {
         self.id = gen_uuid();
@@ -81,4 +81,10 @@ impl LoginRegisterInfo {
             &self.username.as_ref().unwrap_or(&"".to_string()),
             &self.password)
     }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct ValidateForms {
+    pub email:    Option<String>,
+    pub username: Option<String>,
 }

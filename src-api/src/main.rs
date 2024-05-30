@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::io::Read;
 use std::{env, process::exit}; use actix_session::config::{BrowserSession, CookieContentSecurity, PersistentSession};
-use actix_web::cookie::time::Duration;
 use actix_web::cookie::{Key, SameSite};
 use actix_web::middleware::Logger;
 use actix_web::{HttpServer, App, web};
@@ -10,6 +9,7 @@ use utils::get_session_expire;
 use std::sync::Mutex;
 use std::path::PathBuf;
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
+use actix_cors::Cors;
 
 mod routes;
 mod database;
@@ -19,6 +19,21 @@ mod error;
 #[derive(Debug)]
 struct AppState {
     database_instance: Mutex<DatabaseInstance>
+}
+
+fn cors() -> Cors {
+    Cors::default()
+        .allowed_origin_fn(|origin, _| {
+            origin.as_bytes().starts_with(b"http://localhost")
+        })
+        .allowed_methods(vec!["GET", "POST"])
+        .allowed_headers(vec![
+            actix_web::http::header::AUTHORIZATION,
+            actix_web::http::header::ACCEPT,
+            actix_web::http::header::CONTENT_TYPE
+        ])
+        .supports_credentials()
+        .max_age(3600)
 }
 
 fn middleware_session() -> SessionMiddleware<CookieSessionStore> {
@@ -103,15 +118,19 @@ async fn main() -> std::io::Result<()> {
         database_instance: Mutex::new(db_instance)
     });
 
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
-            .wrap(middleware_session())
             .wrap(Logger::default())
+            .wrap(middleware_session())
+            .wrap(cors())
             .service(
                 web::scope("/auth")
                     .configure(routes::auth::login)
                     .configure(routes::auth::register)
+                    .configure(routes::auth::validate)
             )
     })
         .bind(server_domain)?
