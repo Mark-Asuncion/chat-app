@@ -5,11 +5,11 @@ pub enum ErrTypes {
     // 400
     MissingFields,
     InvalidValue,
-    // 404
-    NotFound,
     // 401
     MissingCredentials,
     BadCredentials,
+    // 404
+    NotFound,
     // 500
     DatabaseInstance,
 }

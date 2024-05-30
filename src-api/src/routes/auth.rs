@@ -49,14 +49,14 @@ async fn _login_handler(user: Option<web::Json<LoginRegisterInfo>>, state: web::
     let res = db.fetch_one(query).await;
     if let Err(e) = res {
         dbg!(e);
-        return HttpResponse::build(StatusCode::from_u16(404).unwrap())
-            .body(error::Error::not_found().to_string());
-    }
-    let res = res.unwrap();
-    if res.is_empty() {
         return HttpResponse::build(StatusCode::from_u16(401).unwrap())
             .body(error::Error::bad_credentials().to_string());
     }
+    let res = res.unwrap();
+    // if res.is_empty() {
+    //     return HttpResponse::build(StatusCode::from_u16(401).unwrap())
+    //         .body(error::Error::bad_credentials().to_string());
+    // }
 
     let id: String =        res.get_unchecked(0);
     let email: String =     res.get_unchecked(1);
@@ -87,20 +87,55 @@ pub fn login(cfg: &mut web::ServiceConfig) {
 }
 
 async fn _register_handler(user: web::Json<LoginRegisterInfo>, state: web::Data<AppState>) -> impl Responder {
-    todo!("check if user already exists");
-
-    let acc = user.to_account();
+    let mut acc = user.to_account();
     if (acc.email.is_empty() || acc.username.is_empty()) && acc.password.is_empty() {
         return HttpResponse::build(StatusCode::from_u16(401).unwrap())
             .body(error::Error::missing_credentials().to_string());
     }
-    acc.gen_uuid();
-
     let db = &(*state.database_instance.lock().expect(&error::Error::acquire_instance().to_string()));
+    {
+        let mut username_resp = "";
+        let mut email_resp = "";
+        let mut qb = query::QueryBuilder::new();
+        if !acc.username.is_empty() {
+            qb.select(Account::table(), Some(Account::as_columns()))
+                .filter(query::Filter::If("username".into(), "=".into(), QueryValue::Varchar(acc.username.clone())));
+            let rs = db.fetch_one(qb).await;
+            if let Ok(_) = rs {
+                username_resp = "exists";
+            }
+        }
+        qb = query::QueryBuilder::new();
+        if !acc.email.is_empty() {
+            qb.select(Account::table(), Some(Account::as_columns()))
+                .filter(query::Filter::If("email".into(), "=".into(), QueryValue::Varchar(acc.email.clone())));
+            let rs = db.fetch_one(qb).await;
+            if let Ok(_) = rs {
+                email_resp = "exists";
+            }
+        }
+
+        if !email_resp.is_empty() || !username_resp.is_empty() {
+            let mut remail = Some(email_resp);
+            if email_resp.is_empty() {
+                remail = None;
+            }
+            let mut rusername = Some(username_resp);
+            if username_resp.is_empty() {
+                rusername = None;
+            }
+            return HttpResponse::BadRequest()
+                .json(json!({
+                    "email": remail,
+                    "username": rusername
+                }));
+        }
+    }
+
+    acc.gen_uuid();
     let mut qb = query::QueryBuilder::new();
     qb.insert(Account::table(), Account::as_columns())
         .value(acc.as_insert_value());
-    let db = &(*state.database_instance.lock().expect(&error::Error::acquire_instance().to_string()));
 
     let res = db.execute_insert(qb).await;
     if let Err(e) = res {

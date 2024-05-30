@@ -136,13 +136,18 @@ interface LoginRegisterInfo {
     password: string
 }
 
-async function login(input: LoginRegisterInfo, cbOk: () => void, cbFail: (err: string) => void) {
+async function login(input: LoginRegisterInfo, cbOk: () => void, cbFail: () => void, validator: () => Promise<boolean>) {
     const apiAuth = `${env.API_DOMAIN}/auth/login`;
+
+    if (!(await validator()) ) {
+        return;
+    }
+
     let isEmail = false;
+    input.email = input.email!.trim();
     if (input.email!.match(/@/) != null) {
         isEmail = true;
     }
-    console.log(input, isEmail);
 
     const res = await fetch(apiAuth, {
         method: "POST",
@@ -159,10 +164,36 @@ async function login(input: LoginRegisterInfo, cbOk: () => void, cbFail: (err: s
     if (res.ok) {
         return cbOk();
     }
-    return cbFail(await res.text());
+    cbFail();
 };
 
-function register() {};
+async function register(input: LoginRegisterInfo, cbOk: () => void, cbFail: () => void, validator: () => Promise<boolean>) {
+    const apiAuth = `${env.API_DOMAIN}/auth/register`;
+    const email = input.email?.trim();
+    const username = input.username?.trim();
+    const password = input.password.trim();
+
+    if (!(await validator())) {
+        return;
+    }
+
+    const res = await fetch(apiAuth, {
+        method: "POST",
+        credentials: 'include',
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            email,
+            username,
+            password
+        })
+    });
+    if (res.ok) {
+        return cbOk();
+    }
+    cbFail();
+};
 
 interface ErrState {
     email: [ boolean, string ],
@@ -184,9 +215,38 @@ export function Init() {
         password: ""
     });
 
-    async function validateEmailUsername() {
+    async function validateEmailUsername(): Promise<boolean> {
+        const email = formsValue.email.trim();
+        const username = formsValue.username.trim();
+        let isNotErr = true;
+        const nerr: {
+            email: [ boolean, string ],
+            username: [ boolean, string ],
+        } = {
+            email: [ false, "" ],
+            username: [ false, "" ],
+        };
+        if (email.match(/\s/) != null) {
+            nerr.email = [ true, "Email must not contain any spaces"];
+            isNotErr = false;
+        }
+
+        if (username.match(/\s/) != null) {
+            nerr.username = [ true, "Username must not contain any spaces"];
+            isNotErr = false;
+        }
+        if (!isNotErr) {
+            setIsErr(prev => {
+                return {
+                    ...prev,
+                    email: nerr.email,
+                    username: nerr.username
+                };
+            });
+            return isNotErr;
+        }
+
         const apiAuth = `${env.API_DOMAIN}/auth/validate`;
-        // console.log(formsValue);
         const res = await fetch(apiAuth, {
             method: "POST",
             headers: {
@@ -198,52 +258,42 @@ export function Init() {
             })
         });
         if (!res.ok) {
-            return;
+            return false;
         }
+
         const body = await res.json();
         if (body.email && body.email.length != 0) {
-            setIsErr(prev => {
-                return {
-                    ...prev,
-                    email: [ true, (tabEntries[1].active)? "Email already exists":"" ]
-                }
-            });
-        }
-        else {
-            setIsErr(prev => {
-                return {
-                    ...prev,
-                    email: [ false, "" ]
-                }
-            });
+            nerr.email = [ true, (tabEntries[1].active)? "Email already exists":"" ];
+            isNotErr = false;
         }
         if (body.username && body.username.length != 0) {
+            nerr.username = [ true, "Username already exists" ];
+            isNotErr = false;
+        }
+        if (!isNotErr)
             setIsErr(prev => {
                 return {
                     ...prev,
-                    username: [ true, "Username already exists" ]
-                }
+                    email: nerr.email,
+                    username: nerr.username
+                };
             });
-        }
-        else {
-            setIsErr(prev => {
-                return {
-                    ...prev,
-                    username: [ false, "" ]
-                }
-            });
-        }
+        return isNotErr;
     }
 
-    async function validatePass() {
-        const pass = formsValue.password;
-        if (pass.length != 0 && pass.length < 8) {
+    async function validatePass(): Promise<boolean> {
+        if (formsValue.password.length == 0) {
+            return false;
+        }
+        const pass = formsValue.password.trim();
+        if ( pass.length < 8 || pass.match(/\s/) != null) {
             setIsErr(prev => {
                 return {
                     ...prev,
-                    password: [ true, "Password must be at least 8 characters long" ],
+                    password: [ true, "Password must be at least 8 characters long and must not contain any space" ],
                 }
             });
+            return false;
         }
         else {
             setIsErr(prev => {
@@ -253,6 +303,7 @@ export function Init() {
                 }
             });
         }
+        return true;
     }
 
     function setTab(index: number, setTabEntries: React.Dispatch<React.SetStateAction<TabEntry[]>>) {
@@ -269,6 +320,11 @@ export function Init() {
             email: "",
             username: "",
             password: ""
+        });
+        setIsErr({
+            email: [ false, ""],
+            username: [false, ""],
+            password: [false, ""]
         });
     }
 
@@ -290,6 +346,7 @@ export function Init() {
             });
             setSessionLoginStatus(false);
         }
+        // add some delay
         validateEmailUsername();
         validatePass();
     },[formsValue]);
@@ -369,26 +426,56 @@ export function Init() {
                 <button type='button'
                     onClick={() => {
                         if (tabEntries[1].active) {
-                            register();
+                            register(formsValue,
+                                () => {
+                                    setTabEntries(prev => {
+                                        prev[0].active = true;
+                                        prev[1].active = false;
+                                        return prev;
+                                    });
+                                    setFormsValue({
+                                        email: "",
+                                        username: "",
+                                        password: "",
+                                    })
+                                    // navigate("/");
+                                },
+                                () => {
+                                    setIsErr(prev => {
+                                        return {
+                                            username: [ true, "A Problem occured Please try again"],
+                                            email: [ true, "A Problem occured Please try again"],
+                                            password: [ true, "A Problem occured Please try again"]
+                                        };
+                                    })
+                                },
+                                async () => {
+                                    return await validateEmailUsername() && await validatePass();
+                                }
+                            );
                         }
-                        login({
-                            ...formsValue,
-                            username: null
-                        },
-                            () => {
-                                navigate("/");
+                        else {
+                            login({
+                                ...formsValue,
+                                username: null
                             },
-                            (e) => {
-                                console.log("login_handler::", e);
-                                setIsErr(prev => {
-                                    return {
-                                        ...prev,
-                                        email: [true, "The email you entered does not match any account."],
-                                        password: [true, "The password you entered is incorrect."]
-                                    };
-                                });
-                            }
-                        );
+                                () => {
+                                    navigate("/");
+                                },
+                                () => {
+                                    setIsErr(prev => {
+                                        return {
+                                            ...prev,
+                                            email: [ true, "The email you entered does not match any account."],
+                                            password: [ true, "The password you entered is incorrect."]
+                                        };
+                                    })
+                                },
+                                async () => {
+                                    return await validateEmailUsername() && await validatePass();
+                                }
+                            );
+                        }
                     }}
                     className='text-center mx-auto p-3 bg-accent
                     w-full rounded-md font-bold my-4
