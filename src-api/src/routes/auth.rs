@@ -9,6 +9,7 @@ use crate::{AppState, database::{query, DatabaseUtils}, error};
 use crate::database::schema::account::{Account, LoginRegisterInfo, ValidateForms};
 
 async fn _login_handler(user: Option<web::Json<LoginRegisterInfo>>, state: web::Data<AppState>, session: Session) -> impl Responder {
+    // TODO salting and hashing password
     dbg!(&session.entries());
     let is_authorized = session.get::<bool>("authorized").unwrap_or_default().unwrap_or_default();
     if is_authorized {

@@ -38,7 +38,7 @@ interface InputProps {
     nameId:               string,
     containerclass?:      string,
     onChange:             (v: string) => void,
-    getRef:                  (el: HTMLInputElement) => void,
+    getRef:               (el: HTMLInputElement) => void,
     onEnter:              (el: HTMLInputElement) => void
 }
 
@@ -51,7 +51,7 @@ interface InputPasswordProps {
     nameId:               string,
     containerclass?:      string,
     onChange:             (v: string) => void,
-    getRef:                  (el: HTMLInputElement) => void,
+    getRef:               (el: HTMLInputElement) => void,
     onEnter:              (el: HTMLInputElement) => void
 }
 
@@ -148,7 +148,7 @@ async function login_session(cbOk: () => void) {
 }
 
 interface LoginRegisterInfo {
-    email: string | null,
+    email:    string | null,
     username: string | null,
     password: string
 }
@@ -213,7 +213,7 @@ async function register(input: LoginRegisterInfo, cbOk: () => void, cbFail: () =
 };
 
 interface ErrState {
-    email: [ boolean, string ],
+    email:    [ boolean, string ],
     username: [ boolean, string ],
     password: [ boolean, string ]
 }
@@ -264,6 +264,10 @@ export function Init() {
                 };
             });
             return isNotErr;
+        }
+
+        if (tabEntries[1].active !== true) {
+            return true;
         }
 
         const apiAuth = `${env.API_DOMAIN}/auth/validate`;
@@ -351,7 +355,7 @@ export function Init() {
     inputs.current = [];
     function onEnter(el: HTMLInputElement) {
         let shouldMove = false;
-        console.log(inputs.current)
+        // console.log(inputs.current)
         for (let i=0;i<inputs.current.length;i++) {
             const v = inputs.current[i];
             if (shouldMove) {

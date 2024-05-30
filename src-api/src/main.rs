@@ -123,7 +123,8 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
-            .wrap(Logger::default())
+            // .wrap(Logger::default())
+            .wrap(Logger::new(r#""%r" %s %bb "%{Referer}i" %t %T"#))
             .wrap(middleware_session())
             .wrap(cors())
             .service(
