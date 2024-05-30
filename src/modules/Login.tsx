@@ -1,12 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { TabEntry, Tabs } from './Utils';
 import env from "react-dotenv";
 import { useNavigate } from 'react-router-dom';
-
-interface LoginData {
-    email: string,
-    password: string
-};
 
 function EyeClose() {
     return (
@@ -42,7 +37,9 @@ interface InputProps {
     isErrText:            string,
     nameId:               string,
     containerclass?:      string,
-    onChange:             (v: string) => void
+    onChange:             (v: string) => void,
+    getRef:                  (el: HTMLInputElement) => void,
+    onEnter:              (el: HTMLInputElement) => void
 }
 
 interface InputPasswordProps {
@@ -53,7 +50,9 @@ interface InputPasswordProps {
     isErrText:            string,
     nameId:               string,
     containerclass?:      string,
-    onChange:             (v: string) => void
+    onChange:             (v: string) => void,
+    getRef:                  (el: HTMLInputElement) => void,
+    onEnter:              (el: HTMLInputElement) => void
 }
 
 function Input(prop: InputProps) {
@@ -65,6 +64,10 @@ function Input(prop: InputProps) {
             </label>
             <div className="relative mt-2 rounded-md shadow-sm">
                 <input
+                    ref={el => {
+                        if (el)
+                            prop.getRef(el)
+                    }}
                     type={prop.type}
                     name={prop.nameId}
                     id={prop.nameId}
@@ -72,6 +75,11 @@ function Input(prop: InputProps) {
                     ring-1 ring-inset ring-gray-300 placeholder:text-gray-400
                     focus:ring-2 focus:ring-inset focus:ring-accent focus:outline-none sm:text-sm sm:leading-6"
                     placeholder={prop.placeholder}
+                    onKeyDown={(e) => {
+                        if (e.key == "Enter") {
+                            prop.onEnter(e.target as HTMLInputElement);
+                        }
+                    }}
                     onChange={ (e) => {
                         prop.onChange(e.target.value);
                     }}
@@ -93,6 +101,10 @@ function InputPassword(prop: InputPasswordProps) {
             </label>
             <div className="relative mt-2 rounded-md shadow-sm">
                 <input
+                    ref={el => {
+                        if (el)
+                            prop.getRef(el)
+                    }}
                     type={ (isShowPass)? "text":"password" }
                     name={prop.nameId}
                     id={prop.nameId}
@@ -100,6 +112,11 @@ function InputPassword(prop: InputPasswordProps) {
                     ring-1 ring-inset ring-gray-300 placeholder:text-gray-400
                     focus:ring-2 focus:ring-inset focus:ring-accent focus:outline-none sm:text-sm sm:leading-6"
                     placeholder={prop.placeholder}
+                    onKeyDown={(e) => {
+                        if (e.key == "Enter") {
+                            prop.onEnter(e.target as HTMLInputElement);
+                        }
+                    }}
                     onChange={ (e) => {
                         prop.onChange(e.target.value);
                     }}
@@ -204,6 +221,8 @@ interface ErrState {
 export function Init() {
     const navigate = useNavigate();
     const [sessionLogin, setSessionLoginStatus] = React.useState(true);
+    const inputs = useRef<HTMLInputElement[]>([]);
+    const loginBtnRef = useRef<HTMLButtonElement | null>(null);
     const [isErr, setIsErr] = React.useState<ErrState>({
         email:    [ false, "" ],
         username: [ false, "" ],
@@ -216,6 +235,7 @@ export function Init() {
     });
 
     async function validateEmailUsername(): Promise<boolean> {
+        console.log("validateEmailUsername");
         const email = formsValue.email.trim();
         const username = formsValue.username.trim();
         let isNotErr = true;
@@ -328,6 +348,27 @@ export function Init() {
         });
     }
 
+    inputs.current = [];
+    function onEnter(el: HTMLInputElement) {
+        let shouldMove = false;
+        console.log(inputs.current)
+        for (let i=0;i<inputs.current.length;i++) {
+            const v = inputs.current[i];
+            if (shouldMove) {
+                if (v.value.length != 0) {
+                    break;
+                }
+                v.focus();
+                return;
+            }
+            if (el == v) {
+                shouldMove = true;
+            }
+        }
+        if (loginBtnRef.current)
+            loginBtnRef.current.click();
+    }
+
     const [ tabEntries, setTabEntries ] = React.useState<TabEntry[]>([
         { active: true, text: "Login", cb: function() {
             setTab(0, setTabEntries);
@@ -341,14 +382,15 @@ export function Init() {
 
     useEffect(() => {
         if (sessionLogin) {
+            setSessionLoginStatus(false);
             login_session(() => {
                 navigate("/");
             });
-            setSessionLoginStatus(false);
         }
-        // add some delay
-        validateEmailUsername();
+        const validateWithDelay = setTimeout(validateEmailUsername, 1000);
         validatePass();
+
+        return () => clearTimeout(validateWithDelay);
     },[formsValue]);
 
     return (
@@ -360,7 +402,6 @@ export function Init() {
             </svg>
             <Tabs entries={tabEntries}/>
             <div>
-                {/* extract to component */}
                 <Input
                     value={formsValue.email}
                     type={(tabEntries[1].active)? "email":"text"}
@@ -369,6 +410,8 @@ export function Init() {
                     isErr={isErr.email[0]}
                     isErrText={isErr.email[1]}
                     nameId="emailorusername"
+                    getRef={el => inputs.current.push(el)}
+                    onEnter={el => onEnter(el)}
                     onChange={(v) => {
                         setFormsValue(prev =>{
                             return {
@@ -376,15 +419,12 @@ export function Init() {
                                 email: v
                             }
                         });
-                        // if (tabEntries[1].active) {
-                        //     if (tabEntries[1].active)
-                        //         validateEmailUsername();
-                        // }
                     }}
                 />
                 {
                     ( tabEntries[1].active )?
                         <Input
+                            getRef={el => inputs.current.push(el)}
                             value={formsValue.username}
                             type="text"
                             placeholder="Enter Username"
@@ -393,6 +433,7 @@ export function Init() {
                             isErrText={isErr.username[1]}
                             nameId="username"
                             containerclass="mt-2"
+                            onEnter={el => onEnter(el)}
                             onChange={(v) => {
                                 setFormsValue(prev =>{
                                     return {
@@ -400,11 +441,11 @@ export function Init() {
                                         username: v
                                     }
                                 });
-                                // validateEmailUsername();
                             }}
                         />:<></>
                 }
                 <InputPassword
+                    getRef={el => inputs.current.push(el)}
                     value={formsValue.password}
                     placeholder="Enter Password"
                     label="password"
@@ -412,6 +453,7 @@ export function Init() {
                     isErrText={isErr.password[1]}
                     nameId="password"
                     containerclass="mt-2"
+                    onEnter={el => onEnter(el)}
                     onChange={(v) => {
                         setFormsValue(prev =>{
                             return {
@@ -419,11 +461,11 @@ export function Init() {
                                 password: v
                             }
                         });
-                        // validatePass();
                     }}
                 />
                 <div className='border-b border-neutral-600 mt-10'></div>
                 <button type='button'
+                    ref={loginBtnRef}
                     onClick={() => {
                         if (tabEntries[1].active) {
                             register(formsValue,
@@ -438,7 +480,6 @@ export function Init() {
                                         username: "",
                                         password: "",
                                     })
-                                    // navigate("/");
                                 },
                                 () => {
                                     setIsErr(prev => {
