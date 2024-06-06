@@ -125,6 +125,7 @@ async function login_session(cbOk: () => void) {
     const apiAuth = `${env.API_DOMAIN}/auth/login`;
     const res = await fetch(apiAuth, {
         method: "POST",
+        credentials: "include",
         headers: {
             "Content-Type": "application/json"
         }

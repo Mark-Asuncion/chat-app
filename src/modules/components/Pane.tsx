@@ -10,7 +10,7 @@ export default function Pane(props: PaneProps) {
     return (
         <div
             className={ 'bg-neutral-900 shadow-lg shadow-black'
-                + ' rounded-md h-[100%] p-3' + classN }>
+                + ' rounded-md h-full p-3' + classN }>
             {props.children}
         </div>
     )

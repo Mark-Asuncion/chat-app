@@ -4,33 +4,37 @@ import env from "react-dotenv";
 import Pane from './components/Pane';
 import Searchbar from './components/Searchbar';
 import UsersList, { UserEntry } from './components/UsersList';
+import UserInfo, { IUserInfo } from './components/UserInfo';
 
-async function autoLogin(navigate: NavigateFunction, setLoggedIn: React.Dispatch<React.SetStateAction<boolean>>) {
-    const apiAuth = `${env.API_DOMAIN}/auth/login`;
-    const res = await fetch(apiAuth, {
-        method: "POST",
-        credentials: 'include',
-        headers: {
-            "Content-Type": "application/json"
-        }
+async function getUserInfo(cbOk: (v: IUserInfo) => void, cbFail: () => void) {
+    const apiUser = `${env.API_DOMAIN}/user/info`;
+    const res = await fetch(apiUser, {
+        credentials: 'include'
     });
-    if (!res.ok) {
-        // TODO show modal user session is invalid and redirect 
-        return navigate("/login");
+    if (res.ok) {
+        return cbOk(await res.json() as IUserInfo);
     }
-    // remove this
-    setLoggedIn(true);
+    cbFail();
 }
 
 function App() {
     const navigate = useNavigate();
-    const [loggedIn, setLoggedIn] = useState(false);
     const [searchbar, setSearchbar] = useState("");
+    const [userinfo, setUserInfo] = useState<IUserInfo | null>(null);
 
-    const isLoggedIn = useCallback(autoLogin,[]);
+    const gUserInfo = useCallback(() => getUserInfo(
+        (v: IUserInfo) => {
+            setUserInfo(v);
+        },
+        () => {
+            // show notif user session is expired
+            navigate("/login");
+        }
+    ), []);
+
     useEffect(() => {
-        if (!loggedIn)
-            isLoggedIn(navigate, setLoggedIn);
+        const gtUserInfo = setTimeout(gUserInfo, 1000);
+        return () => clearTimeout(gtUserInfo);
     }, []);
 
     const users: UserEntry[] = [
@@ -52,7 +56,7 @@ function App() {
     // TODO register listener shortcut
     return (
         <div className='flex flex-row gap-3 p-3 h-[100%]'>
-            <Pane className='w-max'>
+            <Pane className='w-max flex flex-col'>
                 <h1 className='text-white text-3xl font-bold'>Inbox</h1>
                 <Searchbar
                     value={searchbar}
@@ -67,6 +71,11 @@ function App() {
                 <UsersList
                     className="mt-3"
                     entries={users}
+                />
+                <div className='border-b border-neutral-600 mt-auto'></div>
+                <UserInfo
+                    profileImg="none"
+                    name={( userinfo )? userinfo.username:"loading..."}
                 />
             </Pane>
             <Pane
