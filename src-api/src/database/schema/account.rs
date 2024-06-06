@@ -1,3 +1,6 @@
+use sqlx::Row;
+
+use crate::error;
 // use crate::error;
 // use crate::error::ErrTypes;
 use crate::utils::gen_uuid;
@@ -31,6 +34,14 @@ impl DatabaseUtils<'_> for Account {
     fn table() -> &'static str {
         "accounts"
     }
+
+    fn from_row(row: &sqlx::postgres::PgRow) -> Self {
+        let id: String = row.try_get("id").unwrap_or_default();
+        let email: String = row.try_get("email").unwrap_or_default();
+        let username: String = row.try_get("username").unwrap_or_default();
+        let password: String = row.try_get("password").unwrap_or_default();
+        return Self::from(&id, &email, &username, &password);
+    }
 }
 
 impl Account {
@@ -57,6 +68,15 @@ impl Account {
         self.id = gen_uuid();
     }
 
+    pub fn from(id: &str, email: &str, username: &str, password: &str) -> Self {
+        Self {
+            id: id.into(),
+            email: email.into(),
+            username: username.into(),
+            password: password.into()
+        }
+    }
+
     pub fn new(email: &str, username: &str, password: &str) -> Self {
         let id = gen_uuid();
         Self {
@@ -66,6 +86,21 @@ impl Account {
             password: password.into()
         }
     }
+
+    pub fn to_read_only(&self) -> ReadOnlyAccount {
+        ReadOnlyAccount { 
+            id: self.id.clone(),
+            email: self.email.clone(),
+            username: self.username.clone()
+        }
+    }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct ReadOnlyAccount {
+    pub id:         String,
+    pub email:      String,
+    pub username:   String
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]

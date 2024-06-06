@@ -15,6 +15,7 @@ mod routes;
 mod database;
 mod utils;
 mod error;
+mod session;
 
 #[derive(Debug)]
 struct AppState {
@@ -124,7 +125,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(state.clone())
             // .wrap(Logger::default())
-            .wrap(Logger::new(r#""%r" %s %bb "%{Referer}i" %t %T"#))
+            .wrap(Logger::new(r#""%r" %s %bb %T"#))
             .wrap(middleware_session())
             .wrap(cors())
             .service(
@@ -132,6 +133,10 @@ async fn main() -> std::io::Result<()> {
                     .configure(routes::auth::login)
                     .configure(routes::auth::register)
                     .configure(routes::auth::validate)
+            )
+            .service(
+                web::scope("/user")
+                    .configure(routes::user::info)
             )
     })
         .bind(server_domain)?

@@ -11,6 +11,7 @@ pub trait DatabaseUtils<'a>  {
     fn as_columns() -> Vec<&'a str>;
     fn as_insert_value(&self) -> Vec<QueryValue>;
     fn table() -> &'a str;
+    fn from_row(row: &PgRow) -> Self;
 }
 
 #[derive(Debug)]

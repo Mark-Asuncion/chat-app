@@ -1,18 +1,18 @@
 // TODO return 500 when failed to acquire database instance
+// TODO salting and hashing password
 use actix_session::Session;
 use actix_web::{HttpResponse, Responder, guard, http::StatusCode};
 use actix_web::web;
 use serde_json::json;
 use sqlx::Row;
 use crate::database::query::QueryValue;
-use crate::{AppState, database::{query, DatabaseUtils}, error};
+use crate::{session::MSession, AppState, database::{query, DatabaseUtils}, error};
 use crate::database::schema::account::{Account, LoginRegisterInfo, ValidateForms};
 
 async fn _login_handler(user: Option<web::Json<LoginRegisterInfo>>, state: web::Data<AppState>, session: Session) -> impl Responder {
-    // TODO salting and hashing password
     dbg!(&session.entries());
-    let is_authorized = session.get::<bool>("authorized").unwrap_or_default().unwrap_or_default();
-    if is_authorized {
+    let mut session_st = MSession::from(&session);
+    if session_st.authorized {
         session.renew();
         return HttpResponse::Ok()
             .body("")
@@ -54,6 +54,7 @@ async fn _login_handler(user: Option<web::Json<LoginRegisterInfo>>, state: web::
             .body(error::Error::bad_credentials().to_string());
     }
     let res = res.unwrap();
+
     // if res.is_empty() {
     //     return HttpResponse::build(StatusCode::from_u16(401).unwrap())
     //         .body(error::Error::bad_credentials().to_string());
@@ -65,10 +66,9 @@ async fn _login_handler(user: Option<web::Json<LoginRegisterInfo>>, state: web::
     let password: String =  res.get_unchecked(3);
     println!("len({})::{}, {}, {}, {}", res.len(), id, email, username, password);
 
-    if let Err(e) = session.insert("user_id", id) {
-        dbg!(e);
-    }
-    if let Err(e) = session.insert("authorized", true) {
+    session_st.user_id = id;
+    session_st.authorized = true;
+    if let Err(e) = session_st.insert(&session) {
         dbg!(e);
     }
 

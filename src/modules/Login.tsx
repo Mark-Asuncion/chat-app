@@ -30,20 +30,7 @@ function ErrText({ value }:{ value: string }) {
 
 interface InputProps {
     value:                string,
-    type:                 string,
-    placeholder:          string,
-    label:                string,
-    isErr:                boolean,
-    isErrText:            string,
-    nameId:               string,
-    containerclass?:      string,
-    onChange:             (v: string) => void,
-    getRef:               (el: HTMLInputElement) => void,
-    onEnter:              (el: HTMLInputElement) => void
-}
-
-interface InputPasswordProps {
-    value:                string,
+    type?:                string,
     placeholder:          string,
     label:                string,
     isErr:                boolean,
@@ -68,7 +55,7 @@ function Input(prop: InputProps) {
                         if (el)
                             prop.getRef(el)
                     }}
-                    type={prop.type}
+                    type={( prop.type )? prop.type:"text"}
                     name={prop.nameId}
                     id={prop.nameId}
                     className="block bg-neutral-700 w-full rounded-md border-0 py-2 pl-3
@@ -91,7 +78,7 @@ function Input(prop: InputProps) {
     )
 }
 
-function InputPassword(prop: InputPasswordProps) {
+function InputPassword(prop: InputProps) {
     const [isShowPass, setIsShowPass] = React.useState(false);
     return (
         <div className={( prop.containerclass )? prop.containerclass:""}>
@@ -125,7 +112,7 @@ function InputPassword(prop: InputPasswordProps) {
                 <button
                     type='button'
                     onClick={() => setIsShowPass(!isShowPass)}
-                    className='absolute inset-y-0 right-0 flex items-center pr-3 button'>
+                    className='absolute inset-y-0 right-0 flex items-center pr-3'>
                     { (isShowPass)? <EyeOpen />:<EyeClose /> }
                 </button>
             </div>

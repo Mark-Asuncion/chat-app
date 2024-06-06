@@ -8,6 +8,7 @@ pub enum ErrTypes {
     // 401
     MissingCredentials,
     BadCredentials,
+    NotAuthenticated,
     // 404
     NotFound,
     // 500
@@ -17,13 +18,13 @@ pub enum ErrTypes {
 impl fmt::Display for ErrTypes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::MissingFields => f.write_fmt(format_args!("Missing Fields")),
-            Self::InvalidValue => f.write_fmt(format_args!("Invalid Value")),
-            Self::NotFound => f.write_fmt(format_args!("Not Found")),
-            Self::DatabaseInstance => f.write_fmt(format_args!("Database Instance")),
-            Self::MissingCredentials => f.write_fmt(format_args!("Missing Credentials")),
-            Self::BadCredentials => f.write_fmt(format_args!("Bad Credentials")),
-
+            Self::MissingFields => f.write_str("Missing Fields"),
+            Self::InvalidValue => f.write_str("Invalid Value"),
+            Self::NotFound => f.write_str("Not Found"),
+            Self::DatabaseInstance => f.write_str("Database Instance"),
+            Self::MissingCredentials => f.write_str("Missing Credentials"),
+            Self::BadCredentials => f.write_str("Bad Credentials"),
+            Self::NotAuthenticated => f.write_str("User is Not Authenticated")
         }
     }
 }
@@ -73,6 +74,13 @@ impl Error {
     pub fn bad_credentials() -> Self {
         Self {
             err_type: ErrTypes::BadCredentials,
+            what: String::new()
+        }
+    }
+
+    pub fn not_authenticated() -> Self {
+        Self {
+            err_type: ErrTypes::NotAuthenticated,
             what: String::new()
         }
     }
