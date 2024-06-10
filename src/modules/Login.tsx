@@ -278,18 +278,23 @@ export function Init() {
             nerr.email = [ true, (tabEntries[1].active)? "Email already exists":"" ];
             isNotErr = false;
         }
+        else {
+            nerr.email = [ false, "" ];
+        }
         if (body.username && body.username.length != 0) {
             nerr.username = [ true, "Username already exists" ];
             isNotErr = false;
         }
-        if (!isNotErr)
-            setIsErr(prev => {
-                return {
-                    ...prev,
-                    email: nerr.email,
-                    username: nerr.username
-                };
-            });
+        else {
+            nerr.username = [ false, "" ];
+        }
+        setIsErr(prev => {
+            return {
+                ...prev,
+                email: nerr.email,
+                username: nerr.username
+            };
+        });
         return isNotErr;
     }
 

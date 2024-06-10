@@ -1,6 +1,10 @@
 use actix_web::{web::Bytes, cookie::{SameSite, time::{Duration, OffsetDateTime}, Cookie}};
+use base64::{engine::general_purpose, Engine as _};
+use pbkdf2::Params;
 use uuid::Uuid;
-use std::{io, env};
+use std::{io, env, str::from_utf8};
+
+pub mod password;
 
 pub static SESSION_NAME: &str =     "cha-session-id";
 
@@ -35,4 +39,31 @@ pub fn set_cookie(id: String) -> Cookie<'static> {
         .http_only(true)
         .secure(debug == "false")
         .finish()
+}
+
+pub fn base64_encode(v: &str) -> String {
+    let mut buf = Vec::new();
+    buf.resize(v.len() * 4 / 3 + 4, 0);
+    let bytes_written = general_purpose::STANDARD.encode_slice(
+        v.as_bytes(),
+        &mut buf
+    ).unwrap();
+    buf.truncate(bytes_written);
+
+    let encoded = from_utf8(&buf).unwrap_or_default();
+    encoded.to_string()
+}
+
+pub fn base64_decode(v: &str) -> String {
+    let buf = general_purpose::STANDARD
+        .decode(v.as_bytes()).unwrap_or_default();
+
+    let decoded = from_utf8(&buf).unwrap_or_default();
+    decoded.to_string()
+}
+
+pub fn get_pbkdf2_params() -> Params {
+    let mut params = Params::default();
+    params.rounds = 1_000;
+    params
 }

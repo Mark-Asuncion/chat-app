@@ -9,10 +9,12 @@ pub enum ErrTypes {
     MissingCredentials,
     BadCredentials,
     NotAuthenticated,
+    CredentialsExists,
     // 404
     NotFound,
     // 500
     DatabaseInstance,
+    InternalServer,
 }
 
 impl fmt::Display for ErrTypes {
@@ -23,8 +25,10 @@ impl fmt::Display for ErrTypes {
             Self::NotFound => f.write_str("Not Found"),
             Self::DatabaseInstance => f.write_str("Database Instance"),
             Self::MissingCredentials => f.write_str("Missing Credentials"),
+            Self::CredentialsExists => f.write_str("Credentials Already Exists"),
             Self::BadCredentials => f.write_str("Bad Credentials"),
-            Self::NotAuthenticated => f.write_str("User is Not Authenticated")
+            Self::NotAuthenticated => f.write_str("User is Not Authenticated"),
+            Self::InternalServer => f.write_str("Internal Server Error"),
         }
     }
 }
@@ -71,6 +75,13 @@ impl Error {
         }
     }
 
+    pub fn credentials_exists() -> Self {
+        Self {
+            err_type: ErrTypes::CredentialsExists,
+            what: String::new()
+        }
+    }
+
     pub fn bad_credentials() -> Self {
         Self {
             err_type: ErrTypes::BadCredentials,
@@ -82,6 +93,13 @@ impl Error {
         Self {
             err_type: ErrTypes::NotAuthenticated,
             what: String::new()
+        }
+    }
+
+    pub fn internal_server(what: &str) -> Self {
+        Self {
+            err_type: ErrTypes::InternalServer,
+            what: what.into()
         }
     }
 }

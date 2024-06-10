@@ -1,12 +1,14 @@
 use sqlx::Row;
+use sqlx::postgres::PgQueryResult;
 
+use crate::database::DatabaseInstance;
+use crate::database::query::QueryBuilder;
 use crate::error;
-// use crate::error;
-// use crate::error::ErrTypes;
 use crate::utils::gen_uuid;
 
 use super::super::DatabaseUtils;
 use super::super::query;
+use super::QueryExecute;
 // use serde_json::Value;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -40,7 +42,24 @@ impl DatabaseUtils<'_> for Account {
         let email: String = row.try_get("email").unwrap_or_default();
         let username: String = row.try_get("username").unwrap_or_default();
         let password: String = row.try_get("password").unwrap_or_default();
-        return Self::from(&id, &email, &username, &password);
+        Self::from(&id, &email, &username, &password)
+    }
+}
+
+impl QueryExecute for Account {
+    async fn insert(&self, db: &DatabaseInstance) -> Result<PgQueryResult, sqlx::Error> {
+        let mut qb = query::QueryBuilder::new();
+
+        qb.insert(Account::table(), Account::as_columns())
+            .value(self.as_insert_value());
+        db.execute_insert(qb).await
+    }
+
+    fn insert_query(&self) -> crate::database::query::QueryBuilder {
+        let mut qb = query::QueryBuilder::new();
+        qb.insert(Account::table(), Account::as_columns())
+            .value(self.as_insert_value());
+        qb
     }
 }
 

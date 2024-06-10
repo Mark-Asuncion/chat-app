@@ -20,6 +20,17 @@ pub struct DatabaseInstance {
 }
 
 impl DatabaseInstance {
+    pub async fn execute_insert_mult(&self, mut vq: Vec<QueryBuilder>) -> Result<PgQueryResult, sqlx::Error> {
+        let mut res = String::new();
+        for q in vq.iter_mut() {
+            res += &q.build();
+        }
+        dbg!(&res);
+        Ok(sqlx::raw_sql(&res)
+            .execute(&self.pool)
+            .await?)
+    }
+
     pub async fn execute_insert(&self, mut q: QueryBuilder) -> Result<PgQueryResult, sqlx::Error> {
         let q = q.build();
         dbg!(&q);

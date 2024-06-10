@@ -16,6 +16,7 @@ mod database;
 mod utils;
 mod error;
 mod session;
+mod tests;
 
 #[derive(Debug)]
 struct AppState {
