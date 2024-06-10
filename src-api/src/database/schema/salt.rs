@@ -1,6 +1,8 @@
 use sqlx::{Row, postgres::PgQueryResult};
 
-use crate::database::{DatabaseUtils, query::{self, QueryBuilder}, DatabaseInstance};
+use crate::database::{DatabaseUtils, DatabaseInstance};
+use crate::database::query::{self};
+use crate::database::query::builder;
 
 use super::{QueryExecute, account::Account, ToQueryBuilder};
 
@@ -35,7 +37,7 @@ impl DatabaseUtils<'_> for Salt {
 
 impl QueryExecute for Salt {
     async fn insert(&self, db: &DatabaseInstance) -> Result<PgQueryResult, sqlx::Error> {
-        let mut qb = query::QueryBuilder::new();
+        let mut qb = builder::QueryBuilder::new();
         qb.insert(Salt::table(), Salt::as_columns())
             .value(self.as_insert_value());
         db.execute_insert(qb).await
@@ -44,8 +46,8 @@ impl QueryExecute for Salt {
 }
 
 impl ToQueryBuilder for Salt {
-    fn insert_query(&self) -> crate::database::query::QueryBuilder {
-        let mut qb = query::QueryBuilder::new();
+    fn insert_query(&self) -> crate::database::query::builder::QueryBuilder {
+        let mut qb = builder::QueryBuilder::new();
         qb.insert(Salt::table(), Salt::as_columns())
             .value(self.as_insert_value());
         qb
@@ -61,11 +63,11 @@ impl Salt {
     }
 
     pub async fn get_from(account: &Account, db: &DatabaseInstance) -> Self {
-        let mut qb = QueryBuilder::new();
+        let mut qb = builder::QueryBuilder::new();
         qb.select(Self::table(), None)
-            .filter(query::Filter::If(
-                "user_id".into(),
-                "=".into(),
+            .filter(query::filter::Filter::if_from(
+                "user_id",
+                "=",
                 query::QueryValue::Varchar(account.id.clone()))
             );
 

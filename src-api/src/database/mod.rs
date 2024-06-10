@@ -5,7 +5,7 @@ use sqlx::postgres::{Postgres, PgPoolOptions, PgQueryResult, PgRow};
 use sqlx::Pool;
 use std::env::var;
 
-use self::query::{QueryBuilder, QueryValue};
+use self::query::{builder::QueryBuilder, QueryValue};
 
 pub trait DatabaseUtils<'a>  {
     fn as_columns() -> Vec<&'a str>;

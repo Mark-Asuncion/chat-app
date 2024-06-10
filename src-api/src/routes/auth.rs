@@ -3,11 +3,11 @@ use actix_session::Session;
 use actix_web::{HttpResponse, Responder, guard, http::StatusCode};
 use actix_web::web;
 use serde_json::json;
-use crate::database::query::QueryValue;
+use crate::database::query::{QueryValue, builder, filter};
 use crate::database::schema::salt::Salt;
 use crate::database::schema::{salt, ToQueryBuilder};
 use crate::utils::password::Password;
-use crate::{session::MSession, AppState, database::{query, DatabaseUtils}, error};
+use crate::{session::MSession, AppState, database::DatabaseUtils, error};
 use crate::database::schema::account::{Account, LoginRegisterInfo, ValidateForms};
 
 async fn _login_handler(user: Option<web::Json<LoginRegisterInfo>>, state: web::Data<AppState>, session: Session) -> impl Responder {
@@ -34,17 +34,18 @@ async fn _login_handler(user: Option<web::Json<LoginRegisterInfo>>, state: web::
 
     let db = &mut (*state.database_instance.lock().expect(&error::Error::acquire_instance().to_string()));
 
-    let filter: Option<query::Filter> = {
+    let filter: Option<filter::Filter> = {
         if !acc.email.is_empty() {
-            Some(query::Filter::If("email".into(),
-                "=".into(),
+            Some(filter::Filter::if_from(
+                "email",
+                "=",
                 QueryValue::Varchar(acc.email.clone())
             ))
         }
         else if !acc.username.is_empty() {
-            Some(query::Filter::If(
-                "username".into(),
-                "=".into(),
+            Some(filter::Filter::if_from(
+                "username",
+                "=",
                 QueryValue::Varchar(acc.username.clone())
             ))
         }
@@ -57,7 +58,7 @@ async fn _login_handler(user: Option<web::Json<LoginRegisterInfo>>, state: web::
             .body(error::Error::missing_credentials().to_string());
     }
     let filter = filter.unwrap();
-    let mut qb = query::QueryBuilder::new();
+    let mut qb = builder::QueryBuilder::new();
     qb.select(Account::table(), None)
         .filter(filter);
 
@@ -149,9 +150,9 @@ async fn _validate_handler(body: web::Json<ValidateForms>, state: web::Data<AppS
     let mut email_resp = "";
     let mut username_resp = "";
     if let Some(email) = forms.email {
-        let mut qb = query::QueryBuilder::new();
+        let mut qb = builder::QueryBuilder::new();
         qb.select(Account::table(), None)
-            .filter(query::Filter::If( "email".into(), "=".into(), QueryValue::Varchar(email) ));
+            .filter(filter::Filter::if_from( "email", "=", QueryValue::Varchar(email) ));
         let rs = db.fetch_one(qb).await;
         if let Ok(_) = rs {
             email_resp = "exists";
@@ -159,9 +160,9 @@ async fn _validate_handler(body: web::Json<ValidateForms>, state: web::Data<AppS
     }
 
     if let Some(username) = forms.username {
-        let mut qb = query::QueryBuilder::new();
+        let mut qb = builder::QueryBuilder::new();
         qb.select(Account::table(), None)
-            .filter(query::Filter::If( "username".into(), "=".into(), QueryValue::Varchar(username) ));
+            .filter(filter::Filter::if_from( "username", "=", QueryValue::Varchar(username) ));
         let rs = db.fetch_one(qb).await;
         if let Ok(_) = rs {
             username_resp = "exists";

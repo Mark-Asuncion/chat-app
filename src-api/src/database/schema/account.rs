@@ -2,13 +2,13 @@ use sqlx::Row;
 use sqlx::postgres::PgQueryResult;
 
 use crate::database::DatabaseInstance;
+use crate::database::query::builder;
 use crate::utils::gen_uuid;
 
 use super::super::DatabaseUtils;
 use super::super::query;
 use super::QueryExecute;
 use super::ToQueryBuilder;
-// use serde_json::Value;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct Account {
@@ -47,7 +47,7 @@ impl DatabaseUtils<'_> for Account {
 
 impl QueryExecute for Account {
     async fn insert(&self, db: &DatabaseInstance) -> Result<PgQueryResult, sqlx::Error> {
-        let mut qb = query::QueryBuilder::new();
+        let mut qb = builder::QueryBuilder::new();
 
         qb.insert(Account::table(), Account::as_columns())
             .value(self.as_insert_value());
@@ -56,8 +56,8 @@ impl QueryExecute for Account {
 }
 
 impl ToQueryBuilder for Account {
-    fn insert_query(&self) -> crate::database::query::QueryBuilder {
-        let mut qb = query::QueryBuilder::new();
+    fn insert_query(&self) -> crate::database::query::builder::QueryBuilder {
+        let mut qb = builder::QueryBuilder::new();
         qb.insert(Account::table(), Account::as_columns())
             .value(self.as_insert_value());
         qb
@@ -65,25 +65,6 @@ impl ToQueryBuilder for Account {
 }
 
 impl Account {
-    // pub fn from(json: Value) -> Result<Self, error::Error> {
-    //     let email    =  &json["email"];
-    //     let username =  &json["username"];
-    //     let password =  &json["password"];
-    //     if email == &Value::Null && username == &Value::Null
-    //         || password == &Value::Null {
-    //         return Err(error::Error::new(ErrTypes::MissingFields, "Email or Username"));
-    //     }
-    //     let email = email.as_str().unwrap_or_default().to_string();
-    //     let username = username.as_str().unwrap_or_default().to_string();
-    //     let password = password.as_str().unwrap_or_default().to_string();
-    //     Ok(Self {
-    //         id: "".into(),
-    //         email,
-    //         username,
-    //         password
-    //     })
-    // }
-
     pub fn gen_uuid(&mut self) {
         self.id = gen_uuid();
     }

@@ -1,7 +1,7 @@
 use actix_session::Session;
 use actix_web::{web, HttpResponse, Responder, http::StatusCode};
 
-use crate::{error, session::MSession, database::{query::{self, Filter, QueryValue}, schema::account::Account, DatabaseUtils}, AppState};
+use crate::{error, session::MSession, database::{query::{filter::Filter, QueryValue, builder}, schema::account::Account, DatabaseUtils}, AppState};
 
 
 async fn _info_handler(state: web::Data<AppState>, session: Session) -> impl Responder {
@@ -14,9 +14,9 @@ async fn _info_handler(state: web::Data<AppState>, session: Session) -> impl Res
     dbg!(&session_st);
 
     let uid = session_st.user_id.clone();
-    let mut qb = query::QueryBuilder::new();
+    let mut qb = builder::QueryBuilder::new();
     qb.select(Account::table(), None)
-        .filter(Filter::If("id".into(), "=".into(), QueryValue::Varchar(uid)));
+        .filter(Filter::if_from("id", "=", QueryValue::Varchar(uid)));
 
     let db = &mut (*state.database_instance.lock().expect(&error::Error::acquire_instance().to_string()));
 

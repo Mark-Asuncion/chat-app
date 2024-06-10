@@ -1,4 +1,4 @@
-use crate::{database::query::{ QueryBuilder, QueryValue, Filter, ORDER }, utils::password::Password};
+use crate::{database::query::{ builder::QueryBuilder, QueryValue, filter::Filter, ORDER }, utils::password::Password};
 
 #[test]
 fn _t_select() {

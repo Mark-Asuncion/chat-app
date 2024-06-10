@@ -10,5 +10,5 @@ pub trait QueryExecute {
 }
 
 pub trait ToQueryBuilder {
-    fn insert_query(&self) -> super::query::QueryBuilder;
+    fn insert_query(&self) -> super::query::builder::QueryBuilder;
 }
