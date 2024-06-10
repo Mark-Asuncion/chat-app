@@ -5,7 +5,7 @@ use actix_web::web;
 use serde_json::json;
 use crate::database::query::QueryValue;
 use crate::database::schema::salt::Salt;
-use crate::database::schema::{salt, QueryExecute};
+use crate::database::schema::{salt, ToQueryBuilder};
 use crate::utils::password::Password;
 use crate::{session::MSession, AppState, database::{query, DatabaseUtils}, error};
 use crate::database::schema::account::{Account, LoginRegisterInfo, ValidateForms};

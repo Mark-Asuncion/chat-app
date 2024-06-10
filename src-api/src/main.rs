@@ -16,6 +16,7 @@ mod database;
 mod utils;
 mod error;
 mod session;
+#[cfg(test)]
 mod tests;
 
 #[derive(Debug)]

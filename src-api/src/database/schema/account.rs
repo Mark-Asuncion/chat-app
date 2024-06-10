@@ -2,13 +2,12 @@ use sqlx::Row;
 use sqlx::postgres::PgQueryResult;
 
 use crate::database::DatabaseInstance;
-use crate::database::query::QueryBuilder;
-use crate::error;
 use crate::utils::gen_uuid;
 
 use super::super::DatabaseUtils;
 use super::super::query;
 use super::QueryExecute;
+use super::ToQueryBuilder;
 // use serde_json::Value;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -54,7 +53,9 @@ impl QueryExecute for Account {
             .value(self.as_insert_value());
         db.execute_insert(qb).await
     }
+}
 
+impl ToQueryBuilder for Account {
     fn insert_query(&self) -> crate::database::query::QueryBuilder {
         let mut qb = query::QueryBuilder::new();
         qb.insert(Account::table(), Account::as_columns())

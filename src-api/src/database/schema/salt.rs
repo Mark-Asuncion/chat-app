@@ -2,7 +2,7 @@ use sqlx::{Row, postgres::PgQueryResult};
 
 use crate::database::{DatabaseUtils, query::{self, QueryBuilder}, DatabaseInstance};
 
-use super::{QueryExecute, account::Account};
+use super::{QueryExecute, account::Account, ToQueryBuilder};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Salt {
@@ -41,6 +41,9 @@ impl QueryExecute for Salt {
         db.execute_insert(qb).await
     }
 
+}
+
+impl ToQueryBuilder for Salt {
     fn insert_query(&self) -> crate::database::query::QueryBuilder {
         let mut qb = query::QueryBuilder::new();
         qb.insert(Salt::table(), Salt::as_columns())
