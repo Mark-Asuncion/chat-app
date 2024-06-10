@@ -9,9 +9,12 @@ use self::query::{builder::QueryBuilder, QueryValue};
 
 pub trait DatabaseUtils<'a>  {
     fn as_columns() -> Vec<&'a str>;
+    fn as_columns_alias() -> Vec<&'a str>;
     fn as_insert_value(&self) -> Vec<QueryValue>;
     fn table() -> &'a str;
+    fn pkey() -> &'a str;
     fn from_row(row: &PgRow) -> Self;
+    fn from_row_alias(row: &PgRow) -> Self;
 }
 
 #[derive(Debug)]

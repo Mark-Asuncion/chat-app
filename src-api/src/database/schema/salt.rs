@@ -14,7 +14,14 @@ pub struct Salt {
 
 impl DatabaseUtils<'_> for Salt {
     fn as_columns() -> Vec<&'static str> {
-        vec!["id", "user_id"]
+        vec!["salts.id", "salts.user_id"]
+    }
+
+    fn as_columns_alias() -> Vec<&'static str> {
+        vec![
+            "salts.id AS salts_id",
+            "salts.user_id salts_user_id"
+        ]
     }
 
     fn as_insert_value(&self) -> Vec<query::QueryValue> {
@@ -28,9 +35,19 @@ impl DatabaseUtils<'_> for Salt {
         "salts"
     }
 
+    fn pkey() -> &'static str {
+        "salts.id"
+    }
+
     fn from_row(row: &sqlx::postgres::PgRow) -> Self {
         let salt: String = row.try_get("id").unwrap_or_default();
         let user_id: String = row.try_get("user_id").unwrap_or_default();
+        Self::new(&salt, &user_id)
+    }
+
+    fn from_row_alias(row: &sqlx::postgres::PgRow) -> Self {
+        let salt: String = row.try_get("salts_id").unwrap_or_default();
+        let user_id: String = row.try_get("salts_user_id").unwrap_or_default();
         Self::new(&salt, &user_id)
     }
 }

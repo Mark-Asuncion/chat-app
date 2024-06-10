@@ -1,4 +1,6 @@
-use crate::{database::query::{ builder::QueryBuilder, QueryValue, filter::Filter, ORDER }, utils::password::Password};
+use sqlx::postgres::PgPoolOptions;
+
+use crate::{database::{query::{ builder::QueryBuilder, QueryValue, filter::Filter, ORDER, join }, init, schema::{account::Account, salt::Salt}, DatabaseUtils}, utils::password::Password};
 
 #[test]
 fn _t_select() {
@@ -36,6 +38,19 @@ fn _t_insert() {
     qb.insert("table", keys)
         .value(values.get(0).unwrap().to_vec())
         .value(values.get(1).unwrap().to_vec());
+
+    println!("{}", qb.build());
+}
+
+#[test]
+fn _t_join() {
+    let mut qb = QueryBuilder::new();
+    let mut cols = Account::as_columns();
+    let mut salt_col = Salt::as_columns();
+    cols.append(&mut salt_col);
+    qb.select(Account::table(), Some(cols))
+        .filter(Filter::if_from("username", "=", QueryValue::Varchar("user".into())))
+    .join(join::Join::inner(Salt::table(), (Account::pkey(), Salt::as_columns().get(1).unwrap())));
 
     println!("{}", qb.build());
 }

@@ -1,4 +1,4 @@
-use super::{QueryValue, ORDER, Operation, filter::{Filter, JoinFilter, VecFilterDisplay}, VecQueryValue};
+use super::{QueryValue, ORDER, Operation, filter::{Filter, JoinFilter, VecFilterDisplay}, VecQueryValue, join::Join};
 
 type UpdateValue = (String, QueryValue);
 type OrderValue  = ( String, ORDER );
@@ -8,7 +8,8 @@ pub struct QueryBuilder {
     update_values:  Option< Vec<UpdateValue> >,
     join_filters:   Option< Vec<JoinFilter> >,
     insert:         Option< Vec<Vec<QueryValue>> >,
-    order_by:       Option<OrderValue>
+    order_by:       Option<OrderValue>,
+    _join:           Option<Join>
 }
 
 impl QueryBuilder {
@@ -19,17 +20,13 @@ impl QueryBuilder {
             join_filters:   None,
             insert:         None,
             order_by:       None,
-            update_values:  None
+            update_values:  None,
+            _join:          None
         }
     }
 
     fn _clear(&mut self) {
-            self.operation =      None;
-            self.filters =        None;
-            self.join_filters =   None;
-            self.insert =         None;
-            self.order_by =       None;
-            self.update_values =  None;
+        *self = QueryBuilder::new();
     }
 
     pub fn build(&mut self) -> String {
@@ -52,6 +49,9 @@ impl QueryBuilder {
                 }
                 else {
                     query += &format!("* FROM {}\n", table);
+                }
+                if let Some(j) = self._join.as_ref() {
+                    query  += &format!("{}\n", j);
                 }
                 if let Some(filters) = self.filters.as_ref() {
                     let ft: String = filters.to_string(&self.join_filters);
@@ -187,6 +187,11 @@ impl QueryBuilder {
 
     pub fn order_by(&mut self, name: &str, order: ORDER) -> &mut Self {
         self.order_by = Some((name.into(), order));
+        self
+    }
+
+    pub fn join(&mut self, j: Join) -> &mut Self {
+        self._join = Some(j);
         self
     }
 }

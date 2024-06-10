@@ -20,7 +20,16 @@ pub struct Account {
 
 impl DatabaseUtils<'_> for Account {
     fn as_columns() -> Vec<&'static str> {
-        vec!["id", "email", "username", "password"]
+        vec!["accounts.id", "accounts.email", "accounts.username", "accounts.password"]
+    }
+
+    fn as_columns_alias() -> Vec<&'static str> {
+        vec![
+            "accounts.id AS accounts_id",
+            "accounts.email AS accounts_email",
+            "accounts.username AS accounts_username",
+            "accounts.password AS accounts_password"
+        ]
     }
 
     fn as_insert_value(&self) -> Vec<query::QueryValue> {
@@ -36,11 +45,23 @@ impl DatabaseUtils<'_> for Account {
         "accounts"
     }
 
+    fn pkey() -> &'static str {
+        "accounts.id"
+    }
+
     fn from_row(row: &sqlx::postgres::PgRow) -> Self {
         let id: String = row.try_get("id").unwrap_or_default();
         let email: String = row.try_get("email").unwrap_or_default();
         let username: String = row.try_get("username").unwrap_or_default();
         let password: String = row.try_get("password").unwrap_or_default();
+        Self::from(&id, &email, &username, &password)
+    }
+
+    fn from_row_alias(row: &sqlx::postgres::PgRow) -> Self {
+        let id: String = row.try_get("accounts_id").unwrap_or_default();
+        let email: String = row.try_get("accounts_email").unwrap_or_default();
+        let username: String = row.try_get("accounts_username").unwrap_or_default();
+        let password: String = row.try_get("accounts_password").unwrap_or_default();
         Self::from(&id, &email, &username, &password)
     }
 }

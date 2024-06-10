@@ -3,6 +3,7 @@ use std::vec::Vec;
 
 pub mod builder;
 pub mod filter;
+pub mod join;
 
 #[derive(Debug, Clone)]
 pub enum QueryValue {

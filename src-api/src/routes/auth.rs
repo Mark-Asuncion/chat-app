@@ -3,7 +3,8 @@ use actix_session::Session;
 use actix_web::{HttpResponse, Responder, guard, http::StatusCode};
 use actix_web::web;
 use serde_json::json;
-use crate::database::query::{QueryValue, builder, filter};
+use sqlx::Row;
+use crate::database::query::{QueryValue, builder, filter, join};
 use crate::database::schema::salt::Salt;
 use crate::database::schema::{salt, ToQueryBuilder};
 use crate::utils::password::Password;
@@ -59,8 +60,14 @@ async fn _login_handler(user: Option<web::Json<LoginRegisterInfo>>, state: web::
     }
     let filter = filter.unwrap();
     let mut qb = builder::QueryBuilder::new();
-    qb.select(Account::table(), None)
-        .filter(filter);
+    let mut cols = Account::as_columns_alias();
+    let mut salt_cols = Salt::as_columns();
+    let salt_user_id = *salt_cols.get(1).unwrap();
+
+    cols.append(&mut salt_cols);
+    qb.select(Account::table(), Some(cols))
+        .filter(filter)
+        .join( join::Join::inner(Salt::table(), (Account::pkey(), salt_user_id)) );
 
     let row = db.fetch_one(qb).await;
     if let Err(e) = row {
@@ -68,9 +75,9 @@ async fn _login_handler(user: Option<web::Json<LoginRegisterInfo>>, state: web::
         return HttpResponse::build(StatusCode::from_u16(401).unwrap())
             .body(error::Error::bad_credentials().to_string());
     }
-    let acc = Account::from_row(&row.unwrap());
-
-    let salt = Salt::get_from(&acc, db).await;
+    let row = row.unwrap();
+    let acc = Account::from_row_alias(&row);
+    let salt = Salt::from_row(&row);
     if salt.is_empty() {
         return HttpResponse::InternalServerError()
             .body(error::Error::internal_server("Cannot find account information").to_string());
