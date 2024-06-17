@@ -1,6 +1,6 @@
-import React from 'react';
+// import React from 'react';
 
-interface PaneProps {
+export interface PaneProps {
     children:      JSX.Element | JSX.Element[],
     className?:    string,
 }

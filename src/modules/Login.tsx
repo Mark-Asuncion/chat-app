@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import { TabEntry, Tabs } from './Utils';
-import env from "react-dotenv";
 import { useNavigate } from 'react-router-dom';
 
 function EyeClose() {
@@ -122,7 +121,7 @@ function InputPassword(prop: InputProps) {
 }
 
 async function login_session(cbOk: () => void) {
-    const apiAuth = `${env.API_DOMAIN}/auth/login`;
+    const apiAuth = `${import.meta.env.VITE_API_DOMAIN}/auth/login`;
     const res = await fetch(apiAuth, {
         method: "POST",
         credentials: "include",
@@ -142,7 +141,7 @@ interface LoginRegisterInfo {
 }
 
 async function login(input: LoginRegisterInfo, cbOk: () => void, cbFail: () => void, validator: () => Promise<boolean>) {
-    const apiAuth = `${env.API_DOMAIN}/auth/login`;
+    const apiAuth = `${import.meta.env.VITE_API_DOMAIN}/auth/login`;
 
     if (!(await validator()) ) {
         return;
@@ -173,7 +172,7 @@ async function login(input: LoginRegisterInfo, cbOk: () => void, cbFail: () => v
 };
 
 async function register(input: LoginRegisterInfo, cbOk: () => void, cbFail: () => void, validator: () => Promise<boolean>) {
-    const apiAuth = `${env.API_DOMAIN}/auth/register`;
+    const apiAuth = `${import.meta.env.VITE_API_DOMAIN}/auth/register`;
     const email = input.email?.trim();
     const username = input.username?.trim();
     const password = input.password.trim();
@@ -258,7 +257,7 @@ export function Init() {
             return true;
         }
 
-        const apiAuth = `${env.API_DOMAIN}/auth/validate`;
+        const apiAuth = `${import.meta.env.VITE_API_DOMAIN}/auth/validate`;
         const res = await fetch(apiAuth, {
             method: "POST",
             headers: {
@@ -479,13 +478,11 @@ export function Init() {
                                     })
                                 },
                                 () => {
-                                    setIsErr(prev => {
-                                        return {
+                                    setIsErr({
                                             username: [ true, "A Problem occured Please try again"],
                                             email: [ true, "A Problem occured Please try again"],
                                             password: [ true, "A Problem occured Please try again"]
-                                        };
-                                    })
+                                    });
                                 },
                                 async () => {
                                     return await validateEmailUsername() && await validatePass();

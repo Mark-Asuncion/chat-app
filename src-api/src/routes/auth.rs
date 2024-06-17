@@ -3,7 +3,6 @@ use actix_session::Session;
 use actix_web::{HttpResponse, Responder, guard, http::StatusCode};
 use actix_web::web;
 use serde_json::json;
-use sqlx::Row;
 use crate::database::query::{QueryValue, builder, filter, join};
 use crate::database::schema::salt::Salt;
 use crate::database::schema::{salt, ToQueryBuilder};

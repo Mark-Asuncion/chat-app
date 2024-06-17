@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { NavigateFunction, useNavigate } from "react-router-dom";
-import env from "react-dotenv";
+import { NavigateFunction as _, useNavigate } from "react-router-dom";
 import Pane from './components/Pane';
 import Searchbar from './components/Searchbar';
 import UsersList, { UserEntry } from './components/UsersList';
 import UserInfo, { IUserInfo } from './components/UserInfo';
+import Loading from './components/Loading';
 
 async function getUserInfo(cbOk: (v: IUserInfo) => void, cbFail: () => void) {
-    const apiUser = `${env.API_DOMAIN}/user/info`;
+    const apiUser = `${import.meta.env.VITE_API_DOMAIN}/user/info`;
     const res = await fetch(apiUser, {
         credentials: 'include'
     });
@@ -33,8 +33,13 @@ function App() {
     ), []);
 
     useEffect(() => {
-        const gtUserInfo = setTimeout(gUserInfo, 1000);
-        return () => clearTimeout(gtUserInfo);
+        if (userinfo) {
+            const gtUserInfo = setTimeout(gUserInfo, 2000);
+            return () => clearTimeout(gtUserInfo);
+        }
+        else {
+            gUserInfo();
+        }
     }, []);
 
     const users: UserEntry[] = [
@@ -53,7 +58,12 @@ function App() {
         }
     ]
 
-    // TODO register listener shortcut
+    if (userinfo == null) {
+        return (
+            <Loading />
+        )
+    }
+
     return (
         <div className='flex flex-row gap-3 p-3 h-[100%]'>
             <Pane className='w-max flex flex-col'>
@@ -80,6 +90,7 @@ function App() {
             </Pane>
             <Pane
                 className='grow'>
+                {<p>test</p>}
             </Pane>
         </div>
     );
