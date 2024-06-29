@@ -1,3 +1,4 @@
+# DEVELOPMENT STATUS: ONGOING :arrows_counterclockwise:
 # Chat App
 # Running Development
 ```bash
